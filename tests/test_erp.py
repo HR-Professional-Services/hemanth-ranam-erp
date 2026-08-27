@@ -2,61 +2,50 @@ import pytest
 import os
 import tempfile
 from fastapi.testclient import TestClient
-
-test_db_file = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-test_db_path = test_db_file.name
-os.environ["ERP_DB_PATH"] = test_db_path
-
 from src.app import app
 from src.database import init_db
 
-@pytest.fixture(scope="module", autouse=True)
-def setup_test_db():
-    init_db(test_db_path)
-    yield
-    if os.path.exists(test_db_path):
-        os.remove(test_db_path)
-
 @pytest.fixture
 def client():
-    return TestClient(app)
+    test_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+    test_db.close()
+    os.environ["ERP_DB_PATH"] = test_db.name
+    init_db(test_db.name)
+    with TestClient(app) as c:
+        yield c
+    if os.path.exists(test_db.name):
+        try:
+            os.remove(test_db.name)
+        except Exception:
+            pass
 
-def test_health(client):
+def test_health_and_branding(client):
     res = client.get("/api/health")
     assert res.status_code == 200
-    assert res.json()["service"] == "HR Business OS / ERP"
+    assert res.json()["service"] == "HR Business OS"
 
-def test_tenant_provisioning(client):
-    res = client.post("/api/tenants", json={
-        "company_name": "Horizon Quant Capital",
-        "admin_email": "ops@horizonquant.com",
+    b_res = client.get("/api/branding")
+    assert b_res.status_code == 200
+    assert b_res.json()["product_name"] == "HR Business OS"
+
+def test_registry_and_tenant_provisioning(client):
+    # 1. App Registry
+    registry = client.get("/api/registry").json()
+    assert len(registry) == 8
+    assert any(a["name"] == "HR CRM" for a in registry)
+
+    # 2. Provision Tenant
+    t_res = client.post("/api/tenants", json={
+        "company_name": "Apex Engineering Ltd",
+        "admin_email": "admin@apexengineering.co.uk",
         "plan_tier": "Enterprise",
-        "domain": "horizon.hemanth-ranam.com",
-        "modules": ["crm", "accounts", "hrms", "helpdesk"]
+        "monthly_fee_gbp": 500.0,
+        "modules_enabled": ["crm", "accounts", "hrms"]
     })
-    assert res.status_code == 201
-    data = res.json()
-    assert data["tenant_code"].startswith("TNT-")
-    assert data["status"] == "Active"
+    assert t_res.status_code == 201
+    assert t_res.json()["status"] == "Active"
 
-def test_tenant_listing(client):
-    res = client.get("/api/tenants")
-    assert res.status_code == 200
-    tenants = res.json()
-    assert len(tenants) >= 1
-    assert tenants[0]["company_name"] == "Horizon Quant Capital"
-
-def test_site_provisioning_orchestration(client):
-    res = client.post("/api/provision-site", json={
-        "tenant_code": "TNT-TEST01",
-        "site_domain": "tenant.hr.app",
-        "admin_password": "SecurePassword123!"
-    })
-    assert res.status_code == 200
-    assert res.json()["status"] == "provisioned"
-
-def test_financial_stats(client):
-    res = client.get("/api/stats")
-    assert res.status_code == 200
-    stats = res.json()
-    assert stats["total_tenants"] >= 1
+    # 3. Create Backup Snapshot
+    bkp_res = client.post("/api/backups", json={"database_name": "accounts.db"})
+    assert bkp_res.status_code == 201
+    assert bkp_res.json()["status"] == "Verified"

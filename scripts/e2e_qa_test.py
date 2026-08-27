@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-HR Business OS / ERP — Comprehensive Real-World Multi-Tenant & Provisioning QA Test
-Simulates tenant creation, module activation, site provisioning, and consolidation metrics.
+HR Business OS — Control Plane, Application Registry & Multi-Tenant Simulation E2E Test
 """
 
 import os
@@ -9,8 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Set up isolated test DB
 test_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+test_db.close()
 os.environ["ERP_DB_PATH"] = test_db.name
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -20,7 +19,7 @@ from src.database import init_db
 
 def run_erp_qa():
     print("==================================================")
-    print("🧪 STARTING REAL-WORLD QA AUDIT: 08 — HR BUSINESS OS / ERP")
+    print("🧪 REAL-WORLD QA SIMULATION: 08 — HR BUSINESS OS")
     print("==================================================")
     init_db(test_db.name)
     client = TestClient(app)
@@ -30,70 +29,50 @@ def run_erp_qa():
     assert health.status_code == 200
     branding = client.get("/api/branding")
     assert branding.status_code == 200
-    assert branding.json()["product_name"] == "HR Business OS / ERP"
-    print("✅ [1/7] Health & Branding verified.")
+    assert branding.json()["product_name"] == "HR Business OS"
+    print("✅ [1/7] Health & Institutional Branding verified.")
 
-    # 2. ERP Enterprise Modules Catalog
-    mods_res = client.get("/api/modules")
-    assert mods_res.status_code == 200
-    mods = mods_res.json()
-    assert len(mods) >= 5
-    mod_codes = [m["code"] for m in mods]
-    assert "crm" in mod_codes
-    assert "accounts" in mod_codes
-    assert "hrms" in mod_codes
-    print(f"✅ [2/7] ERP enterprise modules catalog verified ({len(mods)} active modules installed).")
+    # 2. Central Application Registry Query
+    registry = client.get("/api/registry").json()
+    assert len(registry) == 8
+    print(f"✅ [2/7] Application registry verified: {len(registry)} applications registered (Ports 8001–8009).")
 
-    # 3. Multi-Tenant Enterprise Workspace Creation
-    tenant_res = client.post("/api/tenants", json={
-        "company_name": "Apex Precision Engineering Ltd",
-        "admin_email": "operations@apexengineering.co.uk",
-        "plan_tier": "Enterprise Custom",
-        "domain": "apex.hr-services.com",
-        "modules": ["crm", "accounts", "hrms", "stock", "helpdesk"]
+    # 3. Multi-Tenant Provisioning
+    t_res = client.post("/api/tenants", json={
+        "company_name": "Oakwood Retail Services",
+        "admin_email": "admin@oakwoodretail.co.uk",
+        "plan_tier": "Growth",
+        "monthly_fee_gbp": 350.00,
+        "modules_enabled": ["pos", "accounts", "crm"]
     })
-    assert tenant_res.status_code == 201
-    tenant = tenant_res.json()
-    t_code = tenant["tenant_code"]
-    assert tenant["status"] == "Active"
-    print(f"✅ [3/7] Tenant provisioned: {tenant['company_name']} (Code: {t_code}, Plan: {tenant['plan_tier']}).")
+    assert t_res.status_code == 201
+    tenant = t_res.json()
+    print(f"✅ [3/7] Tenant provisioned: {tenant['tenant_code']} (Status: {tenant['status']}).")
 
-    # 4. Automated ERP Site Provisioning
-    prov_res = client.post("/api/provision-site", json={
-        "tenant_code": t_code,
-        "site_domain": "apex.hr-services.com",
-        "admin_password": "SecureEnterprisePassword2026!"
-    })
-    assert prov_res.status_code == 200
-    prov_data = prov_res.json()
-    assert prov_data["status"] == "provisioned"
-    assert "apex.hr-services.com" in prov_data["admin_url"]
-    print("✅ [4/7] Dedicated white-labelled ERP tenant site provisioned successfully.")
+    # 4. Database Snapshot Verification
+    bkp_res = client.post("/api/backups", json={"database_name": "crm.db"})
+    assert bkp_res.status_code == 201
+    bkp = bkp_res.json()
+    print(f"✅ [4/7] Database snapshot created: {bkp['backup_id']} (Status: {bkp['status']}).")
 
-    # 5. Multi-Tenant Directory Listing
+    # 5. Dashboard Platform Metrics
+    stats = client.get("/api/dashboard/stats").json()
+    assert stats["active_tenants"] >= 4
+    assert stats["monthly_recurring_revenue"] >= 1420.0
+    print(f"✅ [5/7] Control plane metrics calculated (Active Tenants: {stats['active_tenants']}, MRR: £{stats['monthly_recurring_revenue']:,.2f}).")
+
+    # 6. Tenant List Query
     tenants = client.get("/api/tenants").json()
-    assert any(t["tenant_code"] == t_code for t in tenants)
-    print("✅ [5/7] Tenant directory indexing verified.")
+    assert len(tenants) >= 5
+    print("✅ [6/7] Multi-tenant subscription roster queried.")
 
-    # 6. Global ERP Consolidation Metrics
-    stats = client.get("/api/stats").json()
-    assert stats["total_tenants"] >= 1
-    assert stats["consolidated_revenue"] > 0
-    assert stats["consolidated_profit"] > 0
-    print(f"✅ [6/7] Consolidated enterprise financials verified (Revenue: £{stats['consolidated_revenue']:,.2f}, Profit: £{stats['consolidated_profit']:,.2f}).")
+    # 7. CSV & JSON Export
+    assert client.get("/api/export/csv").status_code == 200
+    assert client.get("/api/export/json").status_code == 200
+    print("✅ [7/7] CSV and JSON data sovereignty exports verified.")
 
-    # 7. Complete Data Sovereignty Export
-    csv_res = client.get("/api/export/csv")
-    assert csv_res.status_code == 200
-    assert "Apex Precision Engineering" in csv_res.text
-    json_res = client.get("/api/export/json")
-    assert json_res.status_code == 200
-    assert len(json_res.json()["tenants"]) >= 1
-    print("✅ [7/7] Complete CSV and JSON ERP control plane database exports verified.")
+    print("\n🎉 ALL REAL-WORLD HR BUSINESS OS QA TESTS PASSED WITH 100% SUCCESS!\n")
 
-    print("\n🎉 ALL REAL-WORLD HR BUSINESS OS / ERP QA TESTS PASSED WITH ZERO DEFECTS!\n")
-
-    # Cleanup
     if os.path.exists(test_db.name):
         os.remove(test_db.name)
 

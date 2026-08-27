@@ -97,7 +97,12 @@ def get_stats():
 def list_modules():
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM modules ORDER BY category, name").fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["code"] = d["module_key"]
+            result.append(d)
+        return result
 
 # Tenants CRUD
 @app.get("/api/tenants")

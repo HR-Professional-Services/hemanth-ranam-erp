@@ -51,6 +51,28 @@ def init_db(db_path: str = DB_PATH):
     );
     """)
 
+    # Seed Default Enterprise Modules
+    default_mods = [
+        ("crm", "CRM & Pipeline Management", "Growth", "Customer relationship, leads, deals, and pipeline tracking"),
+        ("accounts", "Accounts & Invoicing", "Finance", "Multi-currency quotes, invoices, payments, and expenses"),
+        ("hrms", "HR People & Attendance", "Human Resources", "Employee directory, attendance, leaves, and payroll"),
+        ("stock", "Inventory & Warehouse", "Operations", "Multi-location inventory, stock levels, and replenishment"),
+        ("helpdesk", "Customer Helpdesk & SLA", "Support", "Ticketing, omni-channel support, and knowledge base"),
+        ("pos", "Point of Sale & Retail", "Commerce", "Touch cashier terminal, barcode scanning, and offline sync"),
+        ("automation", "Workflow Automation Engine", "Platform", "Event-driven pipelines and multi-channel alerts"),
+    ]
+    for m_key, name, cat, desc in default_mods:
+        cursor.execute("""
+        INSERT OR IGNORE INTO modules (module_key, name, category, description, is_installed)
+        VALUES (?, ?, ?, ?, 1)
+        """, (m_key, name, cat, desc))
+
+    # Seed Default Consolidation Metric
+    cursor.execute("""
+    INSERT OR IGNORE INTO consolidation_metrics (id, period, total_revenue, total_expenses, net_profit, headcount)
+    VALUES (1, '2026-Q3', 125000.0, 48000.0, 77000.0, 42)
+    """)
+
     conn.commit()
     conn.close()
 

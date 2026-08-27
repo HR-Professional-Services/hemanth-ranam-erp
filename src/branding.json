@@ -1,0 +1,22 @@
+{
+  "brand_name": "Hemanth Ranam Professional Services",
+  "product_name": "HR Business OS / ERP",
+  "tagline": "All-in-One Small-Business Operating System & Enterprise Resource Planning",
+  "theme": {
+    "primary_color": "#2563eb",
+    "deep_blue": "#1d4ed8",
+    "light_blue": "#60a5fa",
+    "bg_canvas": "#ffffff",
+    "bg_secondary": "#f8fafc",
+    "text_primary": "#0f172a",
+    "text_muted": "#64748b",
+    "card_border": "#e2e8f0",
+    "font_family": "Inter, Outfit, system-ui, sans-serif",
+    "border_radius": "12px"
+  },
+  "erp_edition": {
+    "engine": "HR Business OS + Frappe/ERPNext Core",
+    "edition": "Institutional White-Label Edition",
+    "zero_licensing_cost": "GPL-3.0 / MIT Hybrid with zero per-seat licensing fees"
+  }
+}

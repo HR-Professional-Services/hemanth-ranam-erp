@@ -96,20 +96,20 @@ def init_db(db_path: Optional[str] = None):
         """, ("admin@demo.local", hash_password("demo123"), "Control Plane Lead", "Admin"))
 
     # Seed Application Registry
+    cursor.execute("DELETE FROM app_registry WHERE app_key IN ('pos', 'automation');")
     cursor.execute("SELECT COUNT(*) FROM app_registry;")
     if cursor.fetchone()[0] == 0:
         apps = [
             ("crm", "HR CRM", 8001, "http://localhost:8001", "http://127.0.0.1:8001/api/health", "2.0.0", "Growth", "Online"),
             ("booking", "HR Bookings", 8002, "http://localhost:8002", "http://127.0.0.1:8002/api/health", "2.0.0", "Operations", "Online"),
-            ("pos", "HR POS", 8003, "http://localhost:8003", "http://127.0.0.1:8003/api/health", "2.0.0", "Commerce", "Online"),
             ("accounts", "HR Accounts", 8004, "http://localhost:8004", "http://127.0.0.1:8004/api/health", "2.0.0", "Finance", "Online"),
             ("hrms", "HR People", 8005, "http://localhost:8005", "http://127.0.0.1:8005/api/health", "2.0.0", "Human Resources", "Online"),
             ("helpdesk", "HR Helpdesk", 8006, "http://localhost:8006", "http://127.0.0.1:8006/api/health", "2.0.0", "Support", "Online"),
-            ("automation", "HR Automation", 8007, "http://localhost:8007", "http://127.0.0.1:8007/api/health", "2.0.0", "Platform", "Online"),
+            ("erp", "HR Business OS", 8008, "http://localhost:8008", "http://127.0.0.1:8008/api/health", "2.0.0", "Central Control Plane", "Online"),
             ("client-portal", "HR Client Portal", 8009, "http://localhost:8009", "http://127.0.0.1:8009/api/health", "2.0.0", "Customer Experience", "Online")
         ]
         cursor.executemany("""
-        INSERT INTO app_registry (app_key, name, port, url, health_endpoint, version, category, status)
+        INSERT OR REPLACE INTO app_registry (app_key, name, port, url, health_endpoint, version, category, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         """, apps)
 

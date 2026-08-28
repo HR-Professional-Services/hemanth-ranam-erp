@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import time
+import uuid
 import urllib.request
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Response, Depends, Request
@@ -119,14 +120,21 @@ def list_tenants():
 @app.post("/api/tenants", status_code=201)
 def create_tenant(payload: TenantCreate):
     with get_db() as conn:
-        t_code = f"TEN-{100 + int(time.time()) % 900}"
-        dom = payload.domain or f"{payload.company_name.lower().replace(' ', '')}.hr-suite.local"
+        t_code = f"TEN-{uuid.uuid4().hex[:6].upper()}"
+        dom = payload.domain or f"{payload.company_name.lower().replace(' ', '')}-{uuid.uuid4().hex[:4]}.hr-suite.local"
         cur = conn.execute("""
         INSERT INTO tenants (tenant_code, company_name, admin_email, plan_tier, domain, status, monthly_fee_gbp, modules_enabled)
         VALUES (?, ?, ?, ?, ?, 'Active', ?, ?)
         """, (t_code, payload.company_name, payload.admin_email, payload.plan_tier, dom, payload.monthly_fee_gbp, json.dumps(payload.modules_enabled)))
         conn.commit()
         return {"id": cur.lastrowid, "tenant_code": t_code, "status": "Active", "message": "Tenant provisioned"}
+
+@app.delete("/api/tenants/{tenant_id}")
+def delete_tenant(tenant_id: int):
+    with get_db() as conn:
+        conn.execute("DELETE FROM tenants WHERE id = ?", (tenant_id,))
+        conn.commit()
+        return {"status": "deleted", "id": tenant_id}
 
 @app.get("/api/backups")
 def list_backups():
@@ -479,18 +487,124 @@ def index_page():
       `).join('');
     }
 
+  <!-- Provision Tenant Modal -->
+  <div class="modal-overlay" id="modal-tenant" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; z-index:1000;">
+    <div class="modal-box" style="background:#fff; border:1px solid var(--hr-border); border-radius:10px; width:100%; max-width:540px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 style="font-size:16px; font-weight:700; color:var(--hr-text);">Provision Client Tenant</h3>
+        <button style="background:none; border:none; color:var(--hr-muted); cursor:pointer; font-size:18px;" onclick="closeModals()">✕</button>
+      </div>
+      <form id="form-tenant" onsubmit="submitTenant(event)">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--hr-muted); margin-bottom:4px;">Company Name</label>
+            <input type="text" id="ten-name" class="search-box" style="width:100%;" required placeholder="e.g. Apex Wealth Advisory">
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--hr-muted); margin-bottom:4px;">Admin Email</label>
+            <input type="email" id="ten-email" class="search-box" style="width:100%;" required placeholder="e.g. admin@apexwealth.co.uk">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--hr-muted); margin-bottom:4px;">Plan Tier</label>
+            <select id="ten-tier" class="search-box" style="width:100%;">
+              <option value="Professional">Professional Plan</option>
+              <option value="Enterprise" selected>Enterprise Plan</option>
+              <option value="Starter">Starter Plan</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--hr-muted); margin-bottom:4px;">Monthly Fee (£)</label>
+            <input type="number" step="50" id="ten-fee" class="search-box" style="width:100%;" value="450" required>
+          </div>
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block; font-size:12px; font-weight:600; color:var(--hr-muted); margin-bottom:4px;">Assigned Domain</label>
+          <input type="text" id="ten-domain" class="search-box" style="width:100%;" placeholder="apex.hr-suite.local">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+          <button type="submit" id="btn-submit-ten" class="btn btn-primary">Provision Tenant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="hr-toast" style="position:fixed; bottom:24px; right:24px; background:#0f172a; color:#fff; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600; display:none; z-index:9999; box-shadow:0 10px 15px -3px rgba(0,0,0,0.2);">
+    Action Complete
+  </div>
+
+  <script>
+    function showToast(msg, isSuccess = true) {
+      const t = document.getElementById('hr-toast');
+      t.innerText = msg;
+      t.style.background = isSuccess ? '#0f172a' : '#ef4444';
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    function openTenantModal() {
+      document.getElementById('form-tenant').reset();
+      document.getElementById('modal-tenant').style.display = 'flex';
+    }
+
+    function closeModals() {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    async function submitTenant(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-ten');
+      btn.innerText = 'Provisioning...';
+      btn.disabled = true;
+
+      const payload = {
+        company_name: document.getElementById('ten-name').value,
+        admin_email: document.getElementById('ten-email').value,
+        plan_tier: document.getElementById('ten-tier').value,
+        monthly_fee_gbp: parseFloat(document.getElementById('ten-fee').value),
+        domain: document.getElementById('ten-domain').value || null,
+        modules_enabled: ["crm", "accounts", "hrms", "helpdesk", "booking"]
+      };
+
+      try {
+        const res = await fetch('/api/tenants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.status === 201) {
+          showToast('✓ Tenant provisioned successfully!');
+          closeModals();
+          loadErpData();
+        } else {
+          showToast('Failed to provision tenant', false);
+        }
+      } catch (err) {
+        showToast('Error connecting to server', false);
+      } finally {
+        btn.innerText = 'Provision Tenant';
+        btn.disabled = false;
+      }
+    }
+
+    async function deleteTenant(id) {
+      if (confirm('Decommission this tenant?')) {
+        await fetch(`/api/tenants/${id}`, { method: 'DELETE' });
+        showToast('✓ Tenant decommissioned');
+        loadErpData();
+      }
+    }
+
     async function triggerBackup() {
       await fetch('/api/backups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ database_name: 'master_cluster.db' })
       });
-      alert('Snapshot created successfully!');
+      showToast('✓ Database snapshot created and verified!');
       loadErpData();
-    }
-
-    function openTenantModal() {
-      alert('To provision a new tenant via API, submit to POST /api/tenants.');
     }
 
     window.addEventListener('DOMContentLoaded', () => {

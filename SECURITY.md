@@ -1,6 +1,12 @@
-# SECURITY & MULTI-TENANCY POLICY — HR BUSINESS OS / ERP
+# HR Business OS — V1 Security Policy
 
-* **Strict Tenant Isolation**: Multi-tenant database separation ensures zero cross-entity data contamination.
-* **Role-Based Permissions**: Granular DocType permission managers for financial ledgers and payroll records.
-* **Cryptographic Verification**: Automated MariaDB and SQLite database backup encryption.
-* **Zero Secret Exposure**: All API keys and database credentials managed via secure environment configurations.
+## Implemented Controls
+- SQL injection defense via parameterized `?` placeholders throughout
+- Tenant ID uniqueness enforced at DB constraint level (`UNIQUE` on `tenant_id`)
+- Application registry is bootstrapped at startup and is not modifiable via external API calls in V1
+
+## Future (V2)
+- Admin authentication required for control plane access
+- Tenant-level API key issuance
+- Role separation: `Platform Admin` vs `Billing Admin` vs `Read-Only Viewer`
+- Audit log for all provisioning and suspension events

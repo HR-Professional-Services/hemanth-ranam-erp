@@ -1,7 +1,8 @@
 {
-  "brand_name": "HR",
-  "product_name": "HR Business OS",
-  "tagline": "All-in-One Small-Business Operating System & Master Control Plane",
+  "brand_name": "HR Services",
+  "product_name": "HR Services Business OS",
+  "tagline": "Master Multi-Tenant Control Plane & Unified SaaS Operating System",
+  "logo_text": "HR Services Business OS",
   "theme": {
     "primary_color": "#2563eb",
     "deep_blue": "#1d4ed8",

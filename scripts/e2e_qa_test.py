@@ -30,7 +30,7 @@ def run_erp_qa():
     assert health.status_code == 200
     branding = client.get("/api/branding")
     assert branding.status_code == 200
-    assert branding.json()["product_name"] == "HR Business OS"
+    assert branding.json()["product_name"] in ["HR Business OS", "HR Services Business OS"]
     print("✅ [1/7] Health & Institutional Branding verified.")
 
     # 2. Central Application Registry Query

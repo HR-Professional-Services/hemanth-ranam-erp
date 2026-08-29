@@ -30,9 +30,9 @@ def seed():
 
         # Tenants
         tenants = [
-            ("TNT-APEX01", "Apex Logistics Ltd", "ops@apexlogistics.co.uk", "Enterprise", "apex.hemanth-ranam.com", "Active", json.dumps(["crm", "accounts", "stock", "buying"])),
-            ("TNT-VANG02", "Vanguard Wealth Management", "director@vanguard.ch", "Enterprise", "vanguard.hemanth-ranam.com", "Active", json.dumps(["crm", "accounts", "hrms", "helpdesk"])),
-            ("TNT-VORT03", "Vortex Digital Agency", "hello@vortexagency.io", "Standard", "vortex.hemanth-ranam.com", "Active", json.dumps(["crm", "selling", "projects", "accounts"]))
+            ("TNT-APEX01", "Apex Logistics Ltd", "ops@apexlogistics.co.uk", "Enterprise", "apex.hr-services.local", "Active", json.dumps(["crm", "accounts", "stock", "buying"])),
+            ("TNT-VANG02", "Vanguard Wealth Management", "director@vanguard.ch", "Enterprise", "vanguard.hr-services.local", "Active", json.dumps(["crm", "accounts", "hrms", "helpdesk"])),
+            ("TNT-VORT03", "Vortex Digital Agency", "hello@vortexagency.io", "Standard", "vortex.hr-services.local", "Active", json.dumps(["crm", "selling", "projects", "accounts"]))
         ]
         for t in tenants:
             cursor.execute("""

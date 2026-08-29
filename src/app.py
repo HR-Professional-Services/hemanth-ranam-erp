@@ -28,7 +28,7 @@ def load_branding():
         with open(BRANDING_FILE, "r") as f:
             return json.load(f)
     return {
-        "brand_name": "HR Professional Services",
+        "brand_name": "HR Services",
         "product_name": "HR Business OS",
         "primary_color": "#2563eb",
         "bg_canvas": "#ffffff",
@@ -219,9 +219,34 @@ def index_page():
     .badge-tier { background: #eff6ff; color: #2563eb; }
 
     .search-box { background: var(--hr-surface); border: 1px solid var(--hr-border); border-radius: 6px; padding: 8px 12px; font-size: 13px; color: var(--hr-text); font-family: inherit; }
+  
+    /* --- Universal Responsive Sidebar --- */
+    .sidebar { width: 260px; background: var(--hr-surface); border-right: 1px solid var(--hr-border); display: flex; flex-direction: column; flex-shrink: 0; transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; }
+    body.sidebar-collapsed .sidebar { width: 68px; }
+    body.sidebar-collapsed .sidebar .brand-title,
+    body.sidebar-collapsed .sidebar .brand-sub,
+    body.sidebar-collapsed .sidebar .nav-section-title,
+    body.sidebar-collapsed .sidebar .nav-badge,
+    body.sidebar-collapsed .sidebar .user-info { display: none !important; }
+    body.sidebar-collapsed .sidebar .brand-header { justify-content: center; padding: 16px 8px; }
+    body.sidebar-collapsed .sidebar .nav-item a { justify-content: center; padding: 10px; }
+    body.sidebar-collapsed .sidebar .user-footer { justify-content: center; padding: 12px 8px; }
+    
+    .sidebar-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); backdrop-filter: blur(2px); z-index: 9998; display: none; }
+    .sidebar-overlay.active { display: block; }
+
+    @media (max-width: 1023px) {
+      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 9999; transform: translateX(-100%); transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 10px 0 30px rgba(15,23,42,0.15); width: 280px !important; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .mobile-menu-btn { display: inline-flex !important; }
+      .top-bar { padding: 0 16px !important; }
+      .content-body { padding: 16px !important; }
+    }
+
   </style>
 </head>
 <body>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -576,6 +601,45 @@ def index_page():
       navigate(hash);
     });
   </script>
+
+<script>
+  (function() {
+    const KEY = 'hr_sidebar_collapsed';
+    if (localStorage.getItem(KEY) === 'true' && window.innerWidth >= 1024) {
+      document.body.classList.add('sidebar-collapsed');
+      const s = document.querySelector('.sidebar');
+      if (s) s.classList.add('collapsed');
+    }
+    window.toggleSidebar = function() {
+      if (window.innerWidth < 1024) {
+        const s = document.querySelector('.sidebar');
+        const o = document.getElementById('sidebar-overlay');
+        if (s) {
+          const open = s.classList.toggle('mobile-open');
+          if (o) o.classList.toggle('active', open);
+          document.body.style.overflow = open ? 'hidden' : '';
+        }
+      } else {
+        const c = document.body.classList.toggle('sidebar-collapsed');
+        const s = document.querySelector('.sidebar');
+        if (s) s.classList.toggle('collapsed', c);
+        localStorage.setItem(KEY, c);
+      }
+    };
+    window.closeSidebar = function() {
+      const s = document.querySelector('.sidebar');
+      const o = document.getElementById('sidebar-overlay');
+      if (s) s.classList.remove('mobile-open');
+      if (o) o.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const o = document.getElementById('sidebar-overlay');
+      if (o) o.addEventListener('click', window.closeSidebar);
+    });
+  })();
+</script>
+
 </body>
 </html>
 """
